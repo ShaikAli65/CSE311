@@ -22,8 +22,8 @@ void seq_print() {
 void parallel_print() {
     #pragma omp parallel for
     for(int i = 0; i < 100; i++) {
-        std::cout << "hello world\n";
-    } 
+        std::cout << "hello world" << omp_get_thread_num() << "\n";
+    }
 }
 
 void run() {
