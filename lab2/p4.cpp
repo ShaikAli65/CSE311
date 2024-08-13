@@ -20,7 +20,7 @@ using Matrix = std::vector<std::vector<T>>;
 
 void readMatrix(Matrix<int>& matrix, int rows, int cols) {
     matrix.resize(rows, std::vector<int>(cols));
-    std::cout << "Enter the matrix elements row by row:\n";
+    std::cout << "Enter the matrix rows:\n";
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
             std::cin >> matrix[i][j];
@@ -29,7 +29,8 @@ void readMatrix(Matrix<int>& matrix, int rows, int cols) {
 }
 
 template<typename T>
-void printMatrix(const typename Matrix<T>::Type& matrix) {
+void printMatrix(const Matrix<T>& matrix) {
+    std::cout << "\nmatrix:\n";
     for (const auto& row : matrix) {
         for (const auto& element : row) {
             std::cout << element << ' ';
@@ -38,13 +39,13 @@ void printMatrix(const typename Matrix<T>::Type& matrix) {
     }
 }   
 
-std::pair<Matrix<int>, Matrix<int>> get_input() {
+std::pair<Matrix<int>, Matrix<int>> get_matrices() {
     int rows1, cols1, rows2, cols2;
-    std::cout << "Enter the dimensions of the first matrix (rows cols): ";
+    std::cout << "Enter the dimensions of the first matrix (r x c): ";
     std::cin >> rows1 >> cols1;
     std::vector<std::vector<int>> matrix1;
     readMatrix(matrix1, rows1, cols1);
-    std::cout << "Enter the dimensions of the second matrix (rows cols): ";
+    std::cout << "Enter the dimensions of the second matrix (r x c): ";
     std::cin >> rows2 >> cols2;
     std::vector<std::vector<int>> matrix2;
     readMatrix(matrix2, rows2, cols2); 
@@ -62,7 +63,8 @@ Matrix<T> multiply(const Matrix<T>& matrix1, const Matrix<T>& matrix2) {
     for(uint16_t i = 0; i < r_cols; i++) {
         for(uint16_t j = 0; j < r_rows; j++) {
             for(uint16_t k = 0; k < common_dim; k++) {
-                result[i][j] = matrix1[i][k] * matrix2[k][j];
+                result[i][j] += matrix1[i][k] * matrix2[k][j];
+                std::cout << result[i][j] << " ";            
             }
         }
     }
@@ -70,11 +72,12 @@ Matrix<T> multiply(const Matrix<T>& matrix1, const Matrix<T>& matrix2) {
 }
 
 void run() {
-    const auto& [matrix1, matrix2] = get_input();
+    const auto& [matrix1, matrix2] = get_matrices();
     TIME_POINT(s);
     auto _ = multiply(matrix1, matrix2);
     TIME_POINT(e);
-    RUN_TIME("totol time: ",s,e);
+    printMatrix(_);
+    RUN_TIME("multiplication time: ",s,e);
 }
 
 int main() {
