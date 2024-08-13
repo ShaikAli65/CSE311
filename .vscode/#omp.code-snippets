@@ -29,9 +29,12 @@
 			"#include <chrono>",
 			"#include <vector>",
 			"#include <cstdint>",
+			"#include <random>",
+			"#include <cstdlib>",
 			"#define TIME_POINT(id) const auto id =  std::chrono::high_resolution_clock::now()",
 			"#define RUN_TIME(prefix, start_id, end_id) std::cout << \"\\n\" << prefix <<\\\n (static_cast<std::chrono::duration<double>>(end_id - start_id)).count() << std::endl",
 			"\n",
+
 			"void run() {",
 			"\t$0",
 			"}\n",
