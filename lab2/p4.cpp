@@ -89,15 +89,14 @@ void run() {
     // for(const auto& i : {10,100,1000}) {
 
     // }
-    // sai teja
     // constexpr size_t rows = 10, cols = 10;
-    // constexpr size_t rows = 100, cols = 100;
-    constexpr size_t rows = 1000, cols = 1000;
+    constexpr size_t rows = 100, cols = 100;
+    // constexpr size_t rows = 1000, cols = 1000;
     const auto&matrix1=get_matrix(rows, cols), matrix2 = get_matrix(rows, cols);
     TIME_POINT(s);
-    auto _ = multiply(matrix1, matrix2);
+    auto _ = pmultiply(matrix1, matrix2);
     TIME_POINT(e);
-    // print_matrix(_);
+    print_matrix(_);
     RUN_TIME("multiplication time: ",s,e);
 }
 
@@ -109,3 +108,16 @@ int main() {
     RUN_TIME("total run time:", s, e);
     return 0;
 }
+
+/*
+Execution Time (Sec)
++ --- + --------- + --------- +
+| Dim  | Serial   |  Parallel |
++ --- + --------- + --------- +
+|10   | 8.6e-06   | 0.0030288 |
++ --- + --------- + --------- +
+| 100 | 0.0051071 | 0.0274562 |
++ --- + --------- + --------- +
+1000  | 5.38514   | 1.69391   |
++ --- + --------- + --------- +
+*/
