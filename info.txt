@@ -1,0 +1,27 @@
+
+available constructs:
+
+#pragma omp parallel
+    #pragma omp single
+    #pragma omp master
+    #pragma omp critical
+    #pragma omp barrier
+    #pragma omp atomic
+    #pragma omp task
+
+#pragma omp sections
+    #pragma omp section
+#pragma omp flush
+#pragma omp threadprivate(my_global_var)
+
+#pragma omp parallel for
+#pragma omp parallel for ordered
+    #pragma omp ordered
+
+#pragma omp simd
+#pragma omp cancel parallel
+#pragma omp target
+    #pragma omp target teams
+
+#pragma omp taskwait
+#pragma omp taskyield

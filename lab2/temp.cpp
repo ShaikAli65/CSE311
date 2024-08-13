@@ -1,20 +1,18 @@
 #include <omp.h>
 #include <iostream>
 #include <chrono>
+#include <vector>
 
+void run() {
+
+}
 int main() {
     omp_set_num_threads(4);
-    int i= 0;
     auto s = std::chrono::high_resolution_clock::now();
-    #pragma omp parallel 
-    {
-        
-        std::cout << omp_get_thread_num() << std::endl;
-        // std::cout << omp_get_num_threads() << '\n';
-    }
+    run();
     auto e = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> d = e - s;
-
+    std::cout << "\nrun time :" << d.count() << "s\n";
     return 0;
 }
 
