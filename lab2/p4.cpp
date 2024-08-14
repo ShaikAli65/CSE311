@@ -12,6 +12,8 @@ the matrix (D). For example N=10, 100, 1000…… (Any Larger Number).
 #include <cstdint>
 #include <cstdlib>
 #include <random>
+#include <iomanip>
+
 
 #define TIME_POINT(id) const auto id =  std::chrono::high_resolution_clock::now()
 #define RUN_TIME(prefix, start_id, end_id) std::cout << "\n" << prefix <<\
@@ -25,21 +27,26 @@ void print_matrix(const Matrix<T>& matrix) {
     std::cout << "\nmatrix:\n";
     for (const auto& row : matrix) {
         for (const auto& element : row) {
-            std::cout << element << ' ';
+            std::cout << std::setw(3) << element << ' ';
         }
         std::cout << '\n';
     }
 }   
 
 
-Matrix<int> get_matrix(size_t rows, size_t cols) {
-    Matrix<int> matrix;
-    std::random_device rd;
-    std::mt19937 gen(rd());
+Matrix<int> get_matrix(int seed, size_t rows, size_t cols) {
+    // std::random_device rd;
+    // std::mt19937 gen(rd());
+    // unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::mt19937 gen(seed);
     std::uniform_int_distribution<int> dists;
+
+    Matrix<int> matrix;
     matrix.resize(rows, std::vector<int> (cols));
+
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
+            // matrix[i][j] = dists(gen) % 5;
             matrix[i][j] = dists(gen);
         }
     }
@@ -72,11 +79,9 @@ Matrix<T> pmultiply(const Matrix<T>& matrix1, const Matrix<T>& matrix2) {
     const uint16_t common_dim = matrix1[0].size();
     result.resize(r_rows, std::vector<T>(r_cols, T()));
 
-    #pragma omp parallel for
+    #pragma omp parallel for collapse(3) shared(r_cols, r_rows, common_dim)
     for(size_t i = 0; i < r_cols; i++) {
-        #pragma omp parallel for
         for(size_t j = 0; j < r_rows; j++) {
-            #pragma omp parallel for
             for(size_t k = 0; k < common_dim; k++) {
                 result[i][j] += matrix1[i][k] * matrix2[k][j];
             }
@@ -90,13 +95,15 @@ void run() {
 
     // }
     // constexpr size_t rows = 10, cols = 10;
-    constexpr size_t rows = 100, cols = 100;
-    // constexpr size_t rows = 1000, cols = 1000;
-    const auto&matrix1=get_matrix(rows, cols), matrix2 = get_matrix(rows, cols);
+    // constexpr size_t rows = 100, cols = 100;
+    constexpr size_t rows = 1000, cols = 1000;
+    const auto&matrix1=get_matrix(5, rows, cols), matrix2 = get_matrix(6, rows, cols);
     TIME_POINT(s);
     auto _ = pmultiply(matrix1, matrix2);
     TIME_POINT(e);
-    print_matrix(_);
+    // print_matrix(_);
+    // print_matrix(matrix1);
+    // print_matrix(matrix2);
     RUN_TIME("multiplication time: ",s,e);
 }
 
@@ -110,14 +117,14 @@ int main() {
 }
 
 /*
-Execution Time (Sec)
-+ --- + --------- + --------- +
-| Dim  | Serial   |  Parallel |
-+ --- + --------- + --------- +
-|10   | 8.6e-06   | 0.0030288 |
-+ --- + --------- + --------- +
-| 100 | 0.0051071 | 0.0274562 |
-+ --- + --------- + --------- +
-1000  | 5.38514   | 1.69391   |
-+ --- + --------- + --------- +
+Execution times (sec):
+    + --- + --------- + --------- +
+    | Dim | Serial    |  Parallel |
+    + --- + --------- + --------- +
+    |10   | 8.6e-06   | 0.0030288 |
+    + --- + --------- + --------- +
+    |100  | 0.0051071 | 0.0274562 |
+    + --- + --------- + --------- +
+    |1000 | 5.38514   | 1.69391   |
+    + --- + --------- + --------- +
 */
