@@ -206,13 +206,28 @@ bool check_sorted(const std::vector<int> &v) {
 void run() {
     std::vector<int> v;//= {2, 1, 27, 13, 11, 4, 54, 100, 7};
     // print(v);
-    v.resize(1'0'00'000);
+    // v.resize(10);
+    // v.resize(100);
+    v.resize(1000);
     // assert(check_sorted(v));
     fill_vector(v);
-    TIME_POINT(s);
+    TIME_POINT(s1);
+    merge::psort(v);
+    TIME_POINT(s2);
+    RUN_TIME("MPsort time: ", s1, s2);
+    fill_vector(v);
+    merge::sort(v);
+    TIME_POINT(s3);
+    RUN_TIME("Msort time: ", s2, s3);
+    fill_vector(v);
+    quick::sort(v);
+    TIME_POINT(s4);
+    RUN_TIME("Qsort time: ", s3, s4);
+    fill_vector(v);
     quick::psort(v);
-    TIME_POINT(e);
-    RUN_TIME("Msort time: ", s, e);
+    TIME_POINT(s5);
+    RUN_TIME("QPsort time: ", s4, s5);
+    
     // print(v);
 }
 
@@ -229,13 +244,13 @@ int main() {
 
 /*
 Execution times (sec):
-    + --- + --------- + --------- +
-    | Len |   Merge   |   Quick   |
-    + --- + --------- + --------- +
-    |10   |   |    |
-    + --- + --------- + --------- +
-    |100  |   |    |
-    + --- + --------- + --------- +
-    |1000 |   |    |
-    + --- + --------- + --------- +
+    ╭────────────────────────────────────────────────────────────────────╮
+    │ Len  │   Merge   │   Parallel Merge  │   Quick   │  Parallel Quick │
+    │ ──── + ───────── + ───────────────── + ───────── + ─────────────── │
+    │ 10   │ 0.0001155 │     0.0013929     │  3.6e-05  │   0.000275      │
+    │ ──── + ───────── + ───────────────── + ───────── + ─────────────── │
+    │ 100  │ 0.0002286 │     0.0027847     │  0.000115 │   0.0006319     │
+    │ ──── + ───────── + ───────────────── + ───────── + ─────────────── │
+    │ 1000 │ 0.0004848 │     0.0020288     │ 0.0003093 │   0.0006246     │
+    ╰────────────────────────────────────────────────────────────────────╯
 */
