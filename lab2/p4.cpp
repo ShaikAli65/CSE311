@@ -34,7 +34,7 @@ void print_matrix(const Matrix<T>& matrix) {
 }   
 
 
-Matrix<int> get_matrix(int seed, size_t rows, size_t cols) {
+Matrix<int> get_random_matrix(int seed, size_t rows, size_t cols) {
     // std::random_device rd;
     // std::mt19937 gen(rd());
     // unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
@@ -60,7 +60,7 @@ Matrix<T> multiply(const Matrix<T>& matrix1, const Matrix<T>& matrix2) {
     const uint16_t r_rows = matrix1.size();
     const uint16_t common_dim = matrix1[0].size();
     result.resize(r_rows, std::vector<T>(r_cols, T()));
-
+    
     for(size_t i = 0; i < r_cols; i++) {
         for(size_t j = 0; j < r_rows; j++) {
             for(size_t k = 0; k < common_dim; k++) {
@@ -91,13 +91,10 @@ Matrix<T> pmultiply(const Matrix<T>& matrix1, const Matrix<T>& matrix2) {
 }
 
 void run() {
-    // for(const auto& i : {10,100,1000}) {
-
-    // }
     // constexpr size_t rows = 10, cols = 10;
     // constexpr size_t rows = 100, cols = 100;
     constexpr size_t rows = 1000, cols = 1000;
-    const auto&matrix1=get_matrix(5, rows, cols), matrix2 = get_matrix(6, rows, cols);
+    const auto&matrix1=get_random_matrix(5, rows, cols), matrix2 = get_random_matrix(6, rows, cols);
     TIME_POINT(s);
     auto _ = pmultiply(matrix1, matrix2);
     TIME_POINT(e);

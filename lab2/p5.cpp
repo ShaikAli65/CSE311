@@ -51,21 +51,6 @@ namespace quick
         return i + 1;
     }
 
-    int _ppartition(const int &low, const int &high, std::vector<int> &in) {
-        int pivot = in[high];
-        int i = low - 1, j = low;
-
-        #pragma omp parallel for shared(low, high) 
-        for (int j = low; j < high; j++) {
-            if(in[j] < pivot) {
-                i++;
-                std::swap(in[i], in[j]);
-            }
-        }
-        std::swap(in[i + 1], in[high]);
-        return i + 1;
-    }
-
     void qsort(std::vector<int> &in, const int &low, const int &high) {
         if (low >= high) {
             return;
@@ -74,6 +59,7 @@ namespace quick
         qsort(in, low, pivot - 1);
         qsort(in, pivot + 1, high);
     }
+
     void pqsort(std::vector<int> &in, const int &low, const int &high) {
         if (low >= high) {
             return;
@@ -98,7 +84,6 @@ namespace quick
         qsort(in, 0, in.size() - 1);
     }
     void psort(std::vector<int> &in) {
-
         #pragma omp parallel
         #pragma omp single
         pqsort(in, 0, in.size() - 1);
@@ -147,10 +132,9 @@ namespace merge
         if (left >= right) 
             return;
         
-        const int mid = left + (right - left) / 2;
-        const int &len = right - left;
-        
-        if (len > THRESHOLD) {
+        const int &mid = left + (right - left) / 2;
+
+        if (right - left > THRESHOLD) {
             #pragma omp taskgroup
             {
                 #pragma omp task shared(in) firstprivate(left, mid)
@@ -206,9 +190,9 @@ bool check_sorted(const std::vector<int> &v) {
 void run() {
     std::vector<int> v;//= {2, 1, 27, 13, 11, 4, 54, 100, 7};
     // print(v);
-    // v.resize(10);
+    v.resize(10);
     // v.resize(100);
-    v.resize(1000);
+    // v.resize(1000);
     // assert(check_sorted(v));
     fill_vector(v);
     TIME_POINT(s1);
