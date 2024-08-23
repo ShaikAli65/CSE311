@@ -17,6 +17,7 @@ int main() {
     //omp_set_num_threads(4);
     TIME_POINT(s);
     run();
+    // std::cout << "\033[92m" << "asdasd";
     TIME_POINT(e);
     std::chrono::duration<double> d = e - s;
     std::cout << "\nrun time: " << d.count() << "s\n";

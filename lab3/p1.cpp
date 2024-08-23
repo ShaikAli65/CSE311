@@ -32,45 +32,81 @@ deadline, then do the Documentation as discussed.
 #include <cstdlib>
 #define TIME_POINT(id) const auto id =  std::chrono::high_resolution_clock::now()
 #define RUN_TIME(prefix, start_id, end_id) std::cout << "\n" << prefix <<\
- (static_cast<std::chrono::duration<double>>(end_id - start_id)).count() << std::endl
+ (static_cast<std::chrono::duration<double>>(end_id - start_id)).count() << "s" << std::endl
+
+uint64_t n = 10'000
+;
 
 void serial_pi() {
     
-    int n = 1'00'000;
-    double step = 1.0 / n;
-    double sum = 0.0;
-    for(int i = 0; i < n; i++) {
+    long double step = 1.0 / n;
+    long double sum = 0.0;
+    for(uint64_t i = 0; i < n; i++) {
 
-        double x = (i + 0.5) * step;
+        long double x = (i + 0.5) * step;
         sum += 4.0 / (1.0 + (x * x));
     }
 
-    double pie = sum * step;
+    long double pie = sum * step;
     std::cout << "PIE value : " << pie << "\n";
 }
 
-void parallel_pi() {
+auto parallel_pi() {
     
-    int n = 1'00'000;
-    double step = 1.0 / n;
-    double sum = 0.0;
+    long double step = 1.0 / n;
+    long double sum = 0.0;
     
     #pragma omp parallel for shared(sum)
-    for(int i = 0; i < n; i++) {
-        double x = (i + 0.5) * step;
+    for(uint64_t i = 0; i < n; i++) {
+        long double x = (i + 0.5) * step;
+
+        #pragma omp atomic
         sum += 4.0 / (1.0 + (x * x));
     }
 
-    double pie = sum * step;
+    long double pie = sum * step;
     std::cout << "PIE value : " << pie << "\n";
+    return pie;
+}
+    
+auto parallel_pi_using_reduction() {
+    
+    long double step = 1.0 / n;
+    long double sum = 0.0;
+    
+    #pragma omp parallel for reduction(+:sum)
+    for(uint64_t i = 0; i < n; i++) {
+        long double x = (i + 0.5) * step;
+        sum += 4.0 / (1.0 + (x * x));
+    }
+    std::cout << omp_get_num_threads()<< "\n";
+
+    long double pie = sum * step;
+    std::cout << "PIE value : " << pie << "\n";
+    return pie;
 }
 
 void run() {
+    std::cout << std::string (20,'=')<<"\n";
+    TIME_POINT(s);
     serial_pi();    
+    TIME_POINT(e);
+    RUN_TIME("serial run time: ", s, e);
+    std::cout << std::string (20,'=')<<"\n";
+    TIME_POINT(s1);
+    parallel_pi();
+    TIME_POINT(e1);
+    RUN_TIME("parallel run time: ", s1, e1);
+    std::cout << std::string (20,'=')<<"\n";
+    TIME_POINT(s2);
+    parallel_pi_using_reduction();
+    TIME_POINT(e2);
+    RUN_TIME("parallel reduction run time: ", s2, e2);
+    std::cout << std::string (20,'=')<<"\n";
 }
 
 int main() {
-    //omp_set_num_threads(4);
+
     TIME_POINT(s);
     run();
     TIME_POINT(e);
