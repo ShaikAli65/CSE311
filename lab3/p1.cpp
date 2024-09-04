@@ -37,7 +37,7 @@ deadline, then do the Documentation as discussed.
 uint64_t n = 10'000
 ;
 
-void serial_pi() {
+void serialPi() {
     
     long double step = 1.0 / n;
     long double sum = 0.0;
@@ -89,7 +89,7 @@ auto parallel_pi_using_reduction() {
 void run() {
     std::cout << std::string (20,'=')<<"\n";
     TIME_POINT(s);
-    serial_pi();    
+    serialPi();    
     TIME_POINT(e);
     RUN_TIME("serial run time: ", s, e);
     std::cout << std::string (20,'=')<<"\n";

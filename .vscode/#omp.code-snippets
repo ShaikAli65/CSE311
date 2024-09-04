@@ -32,8 +32,10 @@
 			"#include <random>",
 			"#include <cstdlib>",
 			"#include <iomanip>",
-			"#define TIME_POINT(id) const auto id =  std::chrono::high_resolution_clock::now()",
-			"#define RUN_TIME(prefix, start_id, end_id) std::cout << \"\\n\" << prefix <<\\\n (static_cast<std::chrono::duration<double>>(end_id - start_id)).count() << std::endl",
+			"#define TIME_POINT omp_get_wtime()",
+			"#define RUN_TIME(start_id, end_id) end_id - start_id",
+			"// #define TIME_POINT std::chrono::high_resolution_clock::now()",
+			"// #define RUN_TIME(start_id, end_id) (static_cast<std::chrono::duration<double>>(end_id - start_id)).count()",
 			"\n",
 
 			"void run() {",
@@ -41,10 +43,10 @@
 			"}\n",
 			"int main() {",
 			"    //omp_set_num_threads(4);",
-			"    TIME_POINT(s);",
+			"    auto s = TIME_POINT;",
 			"    run();",
-			"    TIME_POINT(e);",
-			"    RUN_TIME(\"total run time:\", s, e);",
+			"    auto e = TIME_POINT;",
+			"    std::cout << \"total run time: \" << RUN_TIME(s, e) << std::endl;",
 			"    return 0;",
 			"}"
 		]

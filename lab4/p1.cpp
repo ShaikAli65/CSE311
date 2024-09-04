@@ -22,11 +22,12 @@ following function and apply rectangle rule.
 #include <cstdlib>
 #include <cmath>
 #include <iomanip>
-#define REAL_PI 
-#define TIME_POINT(id) const auto id =  std::chrono::high_resolution_clock::now()
-#define RUN_TIME(prefix, start_id, end_id) std::cout << "\n" << prefix <<\
- (static_cast<std::chrono::duration<double>>(end_id - start_id)).count() << std::endl
-#define PARALLEL
+#include <ios>
+
+// #define TIME_POINT std::chrono::high_resolution_clock::now()
+// #define RUN_TIME(start_id, end_id) static_cast<std::chrono::duration<double>>(end_id - start_id).count()
+#define TIME_POINT omp_get_wtime()
+#define RUN_TIME(start_id, end_id) (end_id - start_id)
 
 const double pi = 3.14159265358979323846;
 
@@ -35,44 +36,23 @@ double f(double x) {
 }
 
 double a = 0, b = 1; 
-double n = 1'000;
+std::initializer_list<double> alignments = {0.0, 0.5, 1};
+std::initializer_list<double> n_values = {10, 50, 100, 500, 1000};
+std::vector<std::vector<double>> stats_pi(3, std::vector<double>(n_values.size()));
+std::vector<std::vector<double>> stats_durations(3, std::vector<double>(n_values.size()));
+std::vector<std::vector<double>> stats_errors(3, std::vector<double>(n_values.size()));
 
-double calculate_pi(const double &n, const double &alignment, const std::string &detail="")
-{   
-    double width = (b - a) / n;
-    double area = 0.0;
-
-    double start = omp_get_wtime();
-
-#ifdef PARALLEL
-    #pragma omp parallel for shared(n) reduction(+: area)
-#endif
-    for(int i = 0; i < int(n); i++) {
-        double x = a + width * (i + alignment);
-        area += f(x) * width;
-    }
-
-    double end = omp_get_wtime();
-    
-//     std::string serial_or_parallel = "serial";
-// #ifdef PARALLEL
-//     serial_or_parallel = "parallel";
-// #endif
-//     std::cout << "Value of pi(" << serial_or_parallel <<"):" << area << std::endl;
-//     double error = pi - area;
-//     std::cout << "Error value(" << serial_or_parallel <<"):" << error << std::endl;
-//     std::cout << "Execution time(" << detail <<"):" << (end - start) << std::endl;
-    return area;
-}
-
-void print_stats(const std::string &prefix,const std::initializer_list<double> &n_values, const std::vector<std::vector<double>> &stats) {
-    std::cout << "Actual PI " << std::setprecision (15) << pi << "\n";
+void printStats(
+    const std::string &prefix,
+    const std::initializer_list<double> &n_values,
+    const std::vector<std::vector<double>> &stats
+) {
     std::string line(20 * n_values.size() + 7,'-');
     line = "\n" + line + "\n";
-    
+    std::ios_base::fmtflags f(std::cout.flags());
     std::cout << line;
-    std::cout << '|';
-    std::cout  <<  std::setw(10) << prefix << "|";
+    std::cout << '|' << std::left <<  std::setw(10)  << prefix << "|";
+    std::cout.flags(f);
     for (auto &&i : n_values)   
     {
         std::cout << std::setw(10) << i << std::setw(9) <<  '|';
@@ -84,45 +64,140 @@ void print_stats(const std::string &prefix,const std::initializer_list<double> &
         std::cout << "| " << std::setw(9) << std::left << prefixes[i] <<"| ";
         for (size_t j = 0; j < stats[0].size(); j++)
         {
-            std::cout << std::setw(16) <<stats[i][j] << " | ";
+            // std::cout << std::setw(16) << std::fixed << stats[i][j] << " | ";
+            std::cout << std::setw(16) << stats[i][j] << " | ";
         }
         std::cout << line;
     }
+    std::cout.flags(f);
 }
 
-void serial_pi()
-{    
-    std::initializer_list<double> alignments = {0.0, 0.5, 1};
-    std::initializer_list<double> n_values = {10, 50, 100, 500, 1000};
-    std::vector<std::vector<double>> stats(3, std::vector<double>(n_values.size()));
+auto calculatePi(const double &n, const double &alignment)
+{   
+    double width = (b - a) / n;
+    double area = 0.0;
 
+    double start = TIME_POINT;
+
+    for(int i = 0; i < int(n); i++) {
+        double x = a + width * (i + alignment);
+        area += f(x) * width;
+    }
+
+    double end = TIME_POINT;
+    return std::pair<double, double >{area, RUN_TIME(start, end)};
+}
+
+auto calculatePiParallel(const double &n, const double &alignment) 
+{   
+    double width = (b - a) / n;
+    double area = 0.0;
+
+    double start = TIME_POINT;
+    #pragma omp parallel for shared(n) reduction(+: area)
+    for(int i = 0; i < int(n); i++) {
+        double x = a + width * (i + alignment);
+        area += f(x) * width;
+    }
+
+    double end = TIME_POINT;
+    return std::pair<double, double> {area, RUN_TIME(start, end)};
+}
+
+auto calculatePiParallelWithRace(const double &n, const double &alignment) 
+{   
+    double width = (b - a) / n;
+    double area = 0.0;
+
+    double start = TIME_POINT;
+    #pragma omp parallel for shared(n)
+    for(int i = 0; i < int(n); i++) {
+        double x = a + width * (i + alignment);
+        area += f(x) * width;
+    }
+    double end = TIME_POINT;
+    return std::pair<double, double> {area, RUN_TIME(start, end)};
+}
+
+
+void serialPi()
+{    
+    int i = 0, j = 0;
+    for (auto &&alignment : alignments)
+    {
+        for (auto &&n : n_values)
+        {
+            auto [area, duration] = calculatePi(n, alignment);
+            stats_pi[i][j] = area; 
+            stats_durations[i][j] = duration;
+            stats_errors[i][j++] = pi - area;
+        }
+        i++;
+        j = 0;
+    }
+    std::cout << "Actual PI " << std::setprecision (10) << pi << "\n";
+    std::cout << "\nserial\n";
+    printStats(" values", n_values, stats_pi);
+
+    std::cout << "\nserial\n";
+    printStats(" durations", n_values, stats_durations);
+    std::cout << "\nserial\n";
+    printStats(" errors", n_values, stats_errors);
+}
+
+void parallelPi()
+{
     int i = 0, j = 0;
 
     for (auto &&alignment : alignments)
     {
         for (auto &&n : n_values)
         {
-            stats[i][j++] = calculate_pi(n, alignment);
+            auto [area, duration] = calculatePiParallel(n, alignment);
+            stats_pi[i][j] = area; 
+            stats_durations[i][j] = duration; 
+            stats_errors[i][j++] = pi - area; 
+        }
+        i++;
+        j = 0;
+    }
+    
+    std::cout << "Actual PI " << std::setprecision (10) << pi << "\n";
+    std::cout << "\nparallel\n";
+    printStats(" values", n_values, stats_pi);
+
+    std::cout << "\nparallel\n";
+    printStats(" durations", n_values, stats_durations);
+    std::cout << "\nparallel\n";
+    printStats(" errors", n_values, stats_errors);
+}
+
+void parallelPiWithRace() 
+{
+    int i = 0, j = 0;
+
+    for (auto &&alignment : alignments)
+    {
+        for (auto &&n : n_values)
+        {
+            auto [area, duration] = calculatePiParallelWithRace(n, alignment);
+            stats_pi[i][j] = area; 
+            stats_durations[i][j] = duration; 
+            stats_errors[i][j++] = pi - area; 
         }
         i++;
         j = 0;
     }
 
-    print_stats(" serial",n_values, stats);
+    std::cout << "\n\n\nActual PI " << std::setprecision (10) << pi << "\n";
+    std::cout << "PARALLEL PI WITH RACE\n";
+    printStats(" values", n_values, stats_pi);
+    printStats(" durations", n_values, stats_durations);
+    printStats(" errors", n_values, stats_errors);
 }
-
-void parallel_pi()
-{
-    serial_pi();
-}
-
-void run()
-{
-    serial_pi();
-    // parallel_pi();
-}
-
 int main() {
-    run();
+    serialPi();
+    parallelPi();
+    parallelPiWithRace();
     return 0;
 }
