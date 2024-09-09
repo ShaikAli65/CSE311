@@ -1,3 +1,4 @@
 *.exe
 *.out
 temp.*
+c_cpp_properties.json
