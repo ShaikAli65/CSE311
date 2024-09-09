@@ -65,7 +65,7 @@ void forwardElimination(Matrix<double> &m, std::vector<double> &results)
 {
     const int &n = m.size(); 
     for (int i = 0; i < n - 1; i++) {
-        // Pivoting
+        // Pivoting 
         for (int k = i + 1; k < n; k++) {
             if (abs(m[i][i]) < abs(m[k][i])) {
                 std::swap(m[i], m[k]);
