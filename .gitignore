@@ -1,4 +1,6 @@
 *.exe
 *.out
 temp.*
-c_cpp_properties.json
+.vscode/*
+!.vscode/
+!.vscode/#omp.code-snippets
