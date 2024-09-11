@@ -2,5 +2,5 @@
 *.out
 temp.*
 .vscode/*
-!.vscode/
 !.vscode/#omp.code-snippets
+
