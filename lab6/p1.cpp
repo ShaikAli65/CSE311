@@ -22,107 +22,164 @@ number. Calculate the execution time by using the OpenMP library function.
 #include <iomanip>
 #define TIME_POINT omp_get_wtime()
 #define RUN_TIME(start_id, end_id) end_id - start_id
+
 // #define TIME_POINT std::chrono::high_resolution_clock::now()
 // #define RUN_TIME(start_id, end_id) (static_cast<std::chrono::duration<double>>(end_id - start_id)).count()
+// #define PARALLEL
 
-
-template<typename T>
-using Matrix = std::vector<std::vector<T>>;
-
-
-void run() {
-    
-}
-
-// int main() {
-//     //omp_set_num_threads(4);
-//     auto s = TIME_POINT;
-//     run();
-//     auto e = TIME_POINT;
-//     std::cout << "total run time: " << RUN_TIME(s, e) << std::endl;
-//     return 0;
-// }
-
-#include <iostream>
+#include <bits/stdc++.h>
 #include <vector>
-#include <cmath>
 #include <omp.h>
 
-void luDecomposition(std::vector<std::vector<double>>& A, std::vector<int>& pivot, int n) {
-    for (int i = 0; i < n; i++) {
-        pivot[i] = i;  
-    }
 
-    for (int k = 0; k < n - 1; k++) {
-        double max = std::abs(A[k][k]);
-        int k_prime = k;
-        #pragma omp parallel for shared(A, k, n) reduction(max : max, k_prime)
-        for (int i = k + 1; i < n; i++) {
-            if (std::abs(A[i][k]) > max) {
-                max = std::abs(A[i][k]);
-                k_prime = i;
-            }
-        }
+int main()
+{
+    auto start_time = TIME_POINT;
+    int n = 3;
+    // std::cout << "Enter the number of equations : ";
+    // std::cin >> n;
+    // std::vector<std::vector<double>> A(n, std::vector<double>(n));
+    // std::vector<double> B(n);
 
-        if (k_prime != k) {
-            std::swap(A[k], A[k_prime]);
-            std::swap(pivot[k], pivot[k_prime]);
-        }
+    std::vector<std::vector<double>> A = {
+        {1,2,3},
+        {3,1,4},
+        {5,3,1},
+    };
 
-        #pragma omp parallel for shared(A, k, n)
-        for (int i = k + 1; i < n; i++) {
-            A[i][k] /= A[k][k];
-            for (int j = k + 1; j < n; j++) {
-                A[i][j] -= A[i][k] * A[k][j];
-                std::cout << "Thread " << omp_get_thread_num << " out of " << omp_get_num_threads << " worked on row " << j << std::endl;
-            }
-        }
-    }
-}
+    std::vector<double> B = {
+        14,17,14
+    };
 
-void backSubstitution(const std::vector<std::vector<double>>& A, std::vector<double>& b, const std::vector<int>& pivot, int n) {
-    std::vector<double> x(n);
-    for (int i = 0; i < n; i++) {
-        x[i] = b[pivot[i]];
-    }
-
-    for (int i = 1; i < n; i++) {
-        #pragma omp parallel for shared(A, x, i)
-        for (int j = 0; j < i; j++) {
-            x[i] -= A[i][j] * x[j];
-        }
-    }
-
-    for (int i = n - 1; i >= 0; i--) {
-        #pragma omp parallel for shared(A, x, i)
-        for (int j = i + 1; j < n; j++) {
-            x[i] -= A[i][j] * x[j];
-        }
-        x[i] /= A[i][i];
-    }
-
-    b = x;
-}
-
-int main() {
-    int n = 3;  
-    std::vector<std::vector<double>> A = {{1, -1, 1}, {1, -4, 2}, {1, 2, 8}};
-    std::vector<double> b = {4, 8, 12};
-    std::vector<int> pivot(n);
-
-    double start_time = omp_get_wtime();
-
-    luDecomposition(A, pivot, n);
-
-    backSubstitution(A, b, pivot, n);
-
-    double end_time = omp_get_wtime();
+    // std::cout << "Fill matrix A : " << std::endl;
+    // for (int i = 0; i < n; i++)
+    // {
+    //     for (int j = 0; j < n; j++)
+    //     {
+    //         std::cin >> A[i][j];
+    //     }
+    // }
+    // std::cout << "---------------------------\n";
+    // std::cout << "Enter matrix B : " << std::endl;
+    // for (int i = 0; i < n; i++)
+    // {
+    //     std::cin >> B[i];
+    // }
     
-    std::cout << "Solution: ";
-    for (double val : b) {
-        std::cout << val << " ";
-    }
-    std::cout << "\nExecution Time: " << (end_time - start_time) << " seconds\n";
+    std::vector<std::vector<double>> L(n, std::vector<double>(n, 0.0));
+    std::vector<std::vector<double>> U(n, std::vector<double>(n));
 
+    // Decomposing matrix into L and U
+    for (int i = 0; i < n; i++)
+    {
+        // Fill upper triangular matrix U
+#ifdef PARALLEL
+        #pragma omp parallel for
+#endif
+        for (int j = i; j < n; j++)
+        {
+            U[i][j] = A[i][j];
+        }
+        // Fill lower triangular matrix L and update A
+#ifdef PARALLEL
+        #pragma omp parallel for
+#endif
+        for (int j = i + 1; j < n; j++)
+        {
+            L[j][i] = A[j][i] / A[i][i]; // Factor
+            for (int k = i; k < n; k++)
+            {
+                A[j][k] -= L[j][i] * U[i][k];
+            }
+            // #pragma omp critical
+            // std::cout<<"thread - "<<omp_get_thread_num()<<std::endl;
+        }
+    }
+    
+    // Set diagonal elements of L to 1
+    for (int i = 0; i < n; i++)
+    {
+        L[i][i] = 1.0;
+    }
+    
+    // Display L matrix
+    std::cout << "---------------------------\n";
+    std::cout << "L matrix: " << std::endl;
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            std::cout << L[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+    
+    // Display U matrix
+    std::cout << "---------------------------\n";
+    std::cout << "U matrix: " << std::endl;
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            std::cout << U[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+    
+    // Forward substitution to solve LY = B
+    std::vector<double> y(n);
+    for (int i = 0; i < n; i++)
+    {
+        y[i] = B[i];
+#ifdef PARALLEL
+        #pragma omp parallel for
+#endif
+        for (int j = 0; j < i; j++)
+        {
+#ifdef PARALLEL
+            #pragma omp atomic
+#endif
+            y[i] -= L[i][j] * y[j];
+        }
+    }
+    std::cout << "---------------------------\n";
+    std::cout << "Y matrix: " << std::endl;
+    for (int i = 0; i < n; i++)
+    {
+        std::cout << y[i] << std::endl;
+    }
+
+    // Backward substitution to solve UX = Y
+    std::vector<double> x(n);
+    for (int i = n - 1; i >= 0; i--)
+    {
+        x[i] = y[i];
+
+#ifdef PARALLEL
+        #pragma omp parallel for
+#endif
+        for (int j = i + 1; j < n; j++)
+        {
+#ifdef PARALLEL
+            #pragma omp atomic
+#endif            
+            x[i] -= U[i][j] * x[j];
+        }
+        x[i] /= U[i][i];
+    }
+    
+    std::cout << "---------------------------\n";
+    std::cout << "X matrix (solution): " << std::endl;
+    for (int i = 0; i < n; i++)
+    {
+        std::cout << x[i] << std::endl;
+    }
+    std::cout << "---------------------------\n";
+
+    auto end_time = TIME_POINT;
+    auto elapsed_time = RUN_TIME(start_time, end_time);
+    // elapsed_time = elapsed_time * 1e3;
+    std::cout << "Execution time: " << elapsed_time << " milli seconds" << std::endl;
     return 0;
 }
