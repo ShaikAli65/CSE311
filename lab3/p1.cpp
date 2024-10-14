@@ -1,25 +1,15 @@
 /*
-1. Write an OpenMP program with C++ that estimates the value of pi (𝜋) using a following
-numerical integration formula called rectangle rule.
-𝑨𝒓𝒆𝒂 = ∫
+Write an OpenMP program with C++ that estimates the value of pi (𝜋) using a
+following function and apply rectangle rule.
+𝑨𝒓𝒆𝒂 = ∫ 𝒇(𝒙)
+𝒃
+𝒂
+𝒅𝒙 , 𝒘𝒉𝒆𝒓𝒆 𝒇(𝒙) =
 𝟒
 𝟏 + 𝒙
 𝟐
-𝟏
-𝟎
-𝒅𝒙 = 𝝅
-The following components are to be shown.
-(a) Write the serial version program to estimate the value of pi (𝜋). Test the result with
-classical integration value.
-(b) Write the parallel version program to estimate the same. Test the result with classical
-integration value and by (a). It includes number of threads involved and the area
-calculated by which thread number.
-(c) Identify the line of statement which leads the race condition. Race condition occurs when
-the multiple threads accessing a shared variable. If it exists how will you handle this
-problem? Use appropriate OpenMP clause and find the solution. Test the result with
-classical integration value and by (a) and (b).
-(d) After completed the execution and gets verified from the faculty within submission
-deadline, then do the Documentation as discussed. 
+𝒂 = 𝟎, 𝒃 = 𝟏𝟎,𝒏 = 𝟏𝟎, 𝟓𝟎, 𝟏𝟎𝟎, 𝟓𝟎𝟎, 𝟏𝟎𝟎𝟎.
+
 */
 
 
@@ -30,86 +20,184 @@ deadline, then do the Documentation as discussed.
 #include <cstdint>
 #include <random>
 #include <cstdlib>
-#define TIME_POINT(id) const auto id =  std::chrono::high_resolution_clock::now()
-#define RUN_TIME(prefix, start_id, end_id) std::cout << "\n" << prefix <<\
- (static_cast<std::chrono::duration<double>>(end_id - start_id)).count() << "s" << std::endl
+#include <cmath>
+#include <iomanip>
+#include <ios>
 
-uint64_t n = 10'000
-;
+// #define TIME_POINT std::chrono::high_resolution_clock::now()
+// #define RUN_TIME(start_id, end_id) static_cast<std::chrono::duration<double>>(end_id - start_id).count()
+#define TIME_POINT omp_get_wtime()
+#define RUN_TIME(start_id, end_id) (end_id - start_id)
 
-void serialPi() {
-    
-    long double step = 1.0 / n;
-    long double sum = 0.0;
-    for(uint64_t i = 0; i < n; i++) {
+const double pi = 3.14159265358979323846;
 
-        long double x = (i + 0.5) * step;
-        sum += 4.0 / (1.0 + (x * x));
+double f(double x) {
+    return 4.0 / (1.0 + (x * x));
+}
+
+double a = 0, b = 1; 
+std::initializer_list<double> alignments = {0.0, 0.5, 1};
+std::initializer_list<double> n_values = {10, 50, 100, 500, 1000};
+std::vector<std::vector<double>> stats_pi(3, std::vector<double>(n_values.size()));
+std::vector<std::vector<double>> stats_durations(3, std::vector<double>(n_values.size()));
+std::vector<std::vector<double>> stats_errors(3, std::vector<double>(n_values.size()));
+
+void printStats(
+    const std::string &prefix,
+    const std::initializer_list<double> &n_values,
+    const std::vector<std::vector<double>> &stats
+) {
+    std::string line(20 * n_values.size() + 7,'-');
+    line = "\n" + line + "\n";
+    std::ios_base::fmtflags f(std::cout.flags());
+    std::cout << line;
+    std::cout << '|' << std::left <<  std::setw(10)  << prefix << "|";
+    std::cout.flags(f);
+    for (auto &&i : n_values)   
+    {
+        std::cout << std::setw(10) << i << std::setw(9) <<  '|';
+    }
+    std::cout << line;
+    std::string prefixes[] = {"start", "middle", "end"};
+    for (size_t i = 0; i < stats.size(); i++)
+    {
+        std::cout << "| " << std::setw(9) << std::left << prefixes[i] <<"| ";
+        for (size_t j = 0; j < stats[0].size(); j++)
+        {
+            // std::cout << std::setw(16) << std::fixed << stats[i][j] << " | ";
+            std::cout << std::setw(16) << stats[i][j] << " | ";
+        }
+        std::cout << line;
+    }
+    std::cout.flags(f);
+}
+
+auto calculatePi(const double &n, const double &alignment)
+{   
+    double width = (b - a) / n;
+    double area = 0.0;
+
+    double start = TIME_POINT;
+
+    for(int i = 0; i < int(n); i++) {
+        double x = a + width * (i + alignment);
+        area += f(x) * width;
     }
 
-    long double pie = sum * step;
-    std::cout << "PIE value : " << pie << "\n";
+    double end = TIME_POINT;
+    return std::pair<double, double >{area, RUN_TIME(start, end)};
 }
 
-auto parallel_pi() {
-    
-    long double step = 1.0 / n;
-    long double sum = 0.0;
-    
-    #pragma omp parallel for shared(sum)
-    for(uint64_t i = 0; i < n; i++) {
-        long double x = (i + 0.5) * step;
+auto calculatePiParallel(const double &n, const double &alignment) 
+{   
+    double width = (b - a) / n;
+    double area = 0.0;
 
-        #pragma omp atomic
-        sum += 4.0 / (1.0 + (x * x));
+    double start = TIME_POINT;
+    #pragma omp parallel for shared(n) reduction(+: area)
+    for(int i = 0; i < int(n); i++) {
+        double x = a + width * (i + alignment);
+        area += f(x) * width;
     }
 
-    long double pie = sum * step;
-    std::cout << "PIE value : " << pie << "\n";
-    return pie;
+    double end = TIME_POINT;
+    return std::pair<double, double> {area, RUN_TIME(start, end)};
 }
-    
-auto parallel_pi_using_reduction() {
-    
-    long double step = 1.0 / n;
-    long double sum = 0.0;
-    
-    #pragma omp parallel for reduction(+:sum)
-    for(uint64_t i = 0; i < n; i++) {
-        long double x = (i + 0.5) * step;
-        sum += 4.0 / (1.0 + (x * x));
+
+auto calculatePiParallelWithRace(const double &n, const double &alignment) 
+{   
+    double width = (b - a) / n;
+    double area = 0.0;
+
+    double start = TIME_POINT;
+    #pragma omp parallel for shared(n)
+    for(int i = 0; i < int(n); i++) {
+        double x = a + width * (i + alignment);
+        area += f(x) * width;
     }
-    std::cout << omp_get_num_threads()<< "\n";
-
-    long double pie = sum * step;
-    std::cout << "PIE value : " << pie << "\n";
-    return pie;
+    double end = TIME_POINT;
+    return std::pair<double, double> {area, RUN_TIME(start, end)};
 }
 
-void run() {
-    std::cout << std::string (20,'=')<<"\n";
-    TIME_POINT(s);
-    serialPi();    
-    TIME_POINT(e);
-    RUN_TIME("serial run time: ", s, e);
-    std::cout << std::string (20,'=')<<"\n";
-    TIME_POINT(s1);
-    parallel_pi();
-    TIME_POINT(e1);
-    RUN_TIME("parallel run time: ", s1, e1);
-    std::cout << std::string (20,'=')<<"\n";
-    TIME_POINT(s2);
-    parallel_pi_using_reduction();
-    TIME_POINT(e2);
-    RUN_TIME("parallel reduction run time: ", s2, e2);
-    std::cout << std::string (20,'=')<<"\n";
+
+void serialPi()
+{    
+    int i = 0, j = 0;
+    for (auto &&alignment : alignments)
+    {
+        for (auto &&n : n_values)
+        {
+            auto [area, duration] = calculatePi(n, alignment);
+            stats_pi[i][j] = area; 
+            stats_durations[i][j] = duration;
+            stats_errors[i][j++] = pi - area;
+        }
+        i++;
+        j = 0;
+    }
+    std::cout << "Actual PI " << std::setprecision (10) << pi << "\n";
+    std::cout << "\nserial\n";
+    printStats(" values", n_values, stats_pi);
+
+    std::cout << "\nserial\n";
+    printStats(" durations", n_values, stats_durations);
+    std::cout << "\nserial\n";
+    printStats(" errors", n_values, stats_errors);
 }
 
+void parallelPi()
+{
+    int i = 0, j = 0;
+
+    for (auto &&alignment : alignments)
+    {
+        for (auto &&n : n_values)
+        {
+            auto [area, duration] = calculatePiParallel(n, alignment);
+            stats_pi[i][j] = area; 
+            stats_durations[i][j] = duration; 
+            stats_errors[i][j++] = pi - area; 
+        }
+        i++;
+        j = 0;
+    }
+    
+    std::cout << "Actual PI " << std::setprecision (10) << pi << "\n";
+    std::cout << "\nparallel\n";
+    printStats(" values", n_values, stats_pi);
+
+    std::cout << "\nparallel\n";
+    printStats(" durations", n_values, stats_durations);
+    std::cout << "\nparallel\n";
+    printStats(" errors", n_values, stats_errors);
+}
+
+void parallelPiWithRace() 
+{
+    int i = 0, j = 0;
+
+    for (auto &&alignment : alignments)
+    {
+        for (auto &&n : n_values)
+        {
+            auto [area, duration] = calculatePiParallelWithRace(n, alignment);
+            stats_pi[i][j] = area; 
+            stats_durations[i][j] = duration; 
+            stats_errors[i][j++] = pi - area; 
+        }
+        i++;
+        j = 0;
+    }
+
+    std::cout << "\n\n\nActual PI " << std::setprecision (10) << pi << "\n";
+    std::cout << "PARALLEL PI WITH RACE\n";
+    printStats(" values", n_values, stats_pi);
+    printStats(" durations", n_values, stats_durations);
+    printStats(" errors", n_values, stats_errors);
+}
 int main() {
-
-    TIME_POINT(s);
-    run();
-    TIME_POINT(e);
-    RUN_TIME("total run time:", s, e);
+    serialPi();
+    parallelPi();
+    parallelPiWithRace();
     return 0;
 }

@@ -1,15 +1,22 @@
 /*
-Write an OpenMP program with C++ that estimates the value of pi (𝜋) using a
-following function and apply rectangle rule.
-𝑨𝒓𝒆𝒂 = ∫ 𝒇(𝒙)
-𝒃
-𝒂
-𝒅𝒙 , 𝒘𝒉𝒆𝒓𝒆 𝒇(𝒙) =
-𝟒
-𝟏 + 𝒙
-𝟐
-𝒂 = 𝟎, 𝒃 = 𝟏𝟎,𝒏 = 𝟏𝟎, 𝟓𝟎, 𝟏𝟎𝟎, 𝟓𝟎𝟎, 𝟏𝟎𝟎𝟎.
+1. Write an OpenMP program with C++ that solves the system of linear equations 𝑨𝒙 = 𝒃
+using Gaussian elimination with row pivoting, followed by backward substitution.
+The following components are to be shown.
 
+(a) Write the serial version program to solves the system of linear equations, 𝑨𝒙 = 𝒃.
+Calculate the execution time by using the OpenMP library function.
+Test Case: N=Number of Equations, M=Number of unknowns
+N=3, M=3 → x - y + z = 4, x - 4y + 2z = 8, x + 2y + 8z = 12
+Solution: (x, y, z) = (53, -56, 32)
+(b) Write the parallel version program to estimate the same. 
+Test the result with 
+(a). It includes number of threads involved and the result calculated by which thread
+number. Calculate the execution time by using the OpenMP library function.
+(c) Identify the line of statement which leads the Race condition. Race condition
+occurs when the multiple threads accessing a shared variable. If it exists how will
+you handle this problem? Use appropriate OpenMP directives/clauses and find
+the solution. Test the result with value obtained in (a) and (b). Calculate the
+execution time by using the OpenMP library function
 */
 
 
@@ -20,184 +27,212 @@ following function and apply rectangle rule.
 #include <cstdint>
 #include <random>
 #include <cstdlib>
-#include <cmath>
 #include <iomanip>
-#include <ios>
+#define TIME_POINT(id) const auto id =  std::chrono::high_resolution_clock::now()
+#define RUN_TIME(prefix, start_id, end_id) std::cout << "\n" << prefix <<\
+ (static_cast<std::chrono::duration<double>>(end_id - start_id)).count() << std::endl
 
-// #define TIME_POINT std::chrono::high_resolution_clock::now()
-// #define RUN_TIME(start_id, end_id) static_cast<std::chrono::duration<double>>(end_id - start_id).count()
-#define TIME_POINT omp_get_wtime()
-#define RUN_TIME(start_id, end_id) (end_id - start_id)
+template<typename T>
+using Matrix = std::vector<std::vector<T>>;
 
-const double pi = 3.14159265358979323846;
+std::string line = "\n" + std::string(31,'=') + "\n";
 
-double f(double x) {
-    return 4.0 / (1.0 + (x * x));
+std::pair<Matrix<double>, std::vector<double>> test_case() {
+    // N=3, M=3 → x - y + z = 4, x - 4y + 2z = 8, x + 2y + 8z = 12
+    int no_of_equations = 3, no_of_unknowns = 3;
+    std::vector<double> solutions = {4, 8, 12};
+
+    Matrix<double> test_matrix = {
+        {1,-1, 1,},
+        {1,-4, 2,},
+        {1, 2, 8,},
+    };
+    return {test_matrix, solutions};
 }
 
-double a = 0, b = 1; 
-std::initializer_list<double> alignments = {0.0, 0.5, 1};
-std::initializer_list<double> n_values = {10, 50, 100, 500, 1000};
-std::vector<std::vector<double>> stats_pi(3, std::vector<double>(n_values.size()));
-std::vector<std::vector<double>> stats_durations(3, std::vector<double>(n_values.size()));
-std::vector<std::vector<double>> stats_errors(3, std::vector<double>(n_values.size()));
-
-void printStats(
-    const std::string &prefix,
-    const std::initializer_list<double> &n_values,
-    const std::vector<std::vector<double>> &stats
-) {
-    std::string line(20 * n_values.size() + 7,'-');
-    line = "\n" + line + "\n";
-    std::ios_base::fmtflags f(std::cout.flags());
-    std::cout << line;
-    std::cout << '|' << std::left <<  std::setw(10)  << prefix << "|";
-    std::cout.flags(f);
-    for (auto &&i : n_values)   
-    {
-        std::cout << std::setw(10) << i << std::setw(9) <<  '|';
-    }
-    std::cout << line;
-    std::string prefixes[] = {"start", "middle", "end"};
-    for (size_t i = 0; i < stats.size(); i++)
-    {
-        std::cout << "| " << std::setw(9) << std::left << prefixes[i] <<"| ";
-        for (size_t j = 0; j < stats[0].size(); j++)
-        {
-            // std::cout << std::setw(16) << std::fixed << stats[i][j] << " | ";
-            std::cout << std::setw(16) << stats[i][j] << " | ";
+template<typename T>
+void print_matrix(const Matrix<T>& matrix) {
+    std::cout << "\nmatrix:\n";
+    for (const auto& row : matrix) {
+        for (const auto& element : row) {
+            std::cout << std::setw(3) << element << ' ';
         }
-        std::cout << line;
+        std::cout << '\n';
     }
-    std::cout.flags(f);
 }
 
-auto calculatePi(const double &n, const double &alignment)
-{   
-    double width = (b - a) / n;
-    double area = 0.0;
-
-    double start = TIME_POINT;
-
-    for(int i = 0; i < int(n); i++) {
-        double x = a + width * (i + alignment);
-        area += f(x) * width;
-    }
-
-    double end = TIME_POINT;
-    return std::pair<double, double >{area, RUN_TIME(start, end)};
-}
-
-auto calculatePiParallel(const double &n, const double &alignment) 
-{   
-    double width = (b - a) / n;
-    double area = 0.0;
-
-    double start = TIME_POINT;
-    #pragma omp parallel for shared(n) reduction(+: area)
-    for(int i = 0; i < int(n); i++) {
-        double x = a + width * (i + alignment);
-        area += f(x) * width;
-    }
-
-    double end = TIME_POINT;
-    return std::pair<double, double> {area, RUN_TIME(start, end)};
-}
-
-auto calculatePiParallelWithRace(const double &n, const double &alignment) 
-{   
-    double width = (b - a) / n;
-    double area = 0.0;
-
-    double start = TIME_POINT;
-    #pragma omp parallel for shared(n)
-    for(int i = 0; i < int(n); i++) {
-        double x = a + width * (i + alignment);
-        area += f(x) * width;
-    }
-    double end = TIME_POINT;
-    return std::pair<double, double> {area, RUN_TIME(start, end)};
-}
-
-
-void serialPi()
-{    
-    int i = 0, j = 0;
-    for (auto &&alignment : alignments)
-    {
-        for (auto &&n : n_values)
-        {
-            auto [area, duration] = calculatePi(n, alignment);
-            stats_pi[i][j] = area; 
-            stats_durations[i][j] = duration;
-            stats_errors[i][j++] = pi - area;
-        }
-        i++;
-        j = 0;
-    }
-    std::cout << "Actual PI " << std::setprecision (10) << pi << "\n";
-    std::cout << "\nserial\n";
-    printStats(" values", n_values, stats_pi);
-
-    std::cout << "\nserial\n";
-    printStats(" durations", n_values, stats_durations);
-    std::cout << "\nserial\n";
-    printStats(" errors", n_values, stats_errors);
-}
-
-void parallelPi()
+void forwardElimination(Matrix<double> &m, std::vector<double> &results)
 {
-    int i = 0, j = 0;
-
-    for (auto &&alignment : alignments)
-    {
-        for (auto &&n : n_values)
-        {
-            auto [area, duration] = calculatePiParallel(n, alignment);
-            stats_pi[i][j] = area; 
-            stats_durations[i][j] = duration; 
-            stats_errors[i][j++] = pi - area; 
+    const int &n = m.size(); 
+    for (int i = 0; i < n - 1; i++) {
+        // Pivoting 
+        for (int k = i + 1; k < n; k++) {
+            if (abs(m[i][i]) < abs(m[k][i])) {
+                std::swap(m[i], m[k]);
+                std::swap(results[i], results[k]);
+            }
         }
-        i++;
-        j = 0;
+        // Elimination
+        for (int j = i + 1; j < n; j++) {
+            double factor = m[j][i] / m[i][i];
+            for (int k = i; k < n; k++) {
+                m[j][k] -= factor * m[i][k];
+            }
+            results[j] -= factor * results[i];
+        }
     }
+}
+void forwardEliminationParallel(Matrix<double> &m, std::vector<double> &results)
+{
+    const int &n = m.size(); 
+
+    #pragma omp parallel for shared(m, results, n)
+    for (int i = 0; i < n - 1; i++) {
+        // Pivoting
+        for (int k = i + 1; k < n; k++) {
+            if (abs(m[i][i]) < abs(m[k][i])) {
+                std::swap(m[i], m[k]);
+                std::swap(results[i], results[k]);
+            }
+        }
+        // Elimination
+        for (int j = i + 1; j < n; j++) {
+            double factor = m[j][i] / m[i][i];
+            for (int k = i; k < n; k++) {
+                m[j][k] -= factor * m[i][k];
+            }
+            results[j] -= factor * results[i];
+        }
+    }
+}
+
+void forwardEliminationParallelWithoutRace(Matrix<double> &m, std::vector<double> &results)
+{
+    const int &n = m.size(); 
+
+    #pragma omp parallel for shared(results, n)
+    for (int i = 0; i < n - 1; i++) {
+        // Pivoting
+        #pragma omp critical
+        {
+            for (int k = i + 1; k < n; k++) {
+                if (abs(m[i][i]) < abs(m[k][i])) {
+                    std::swap(m[i], m[k]);
+                    std::swap(results[i], results[k]);
+                }
+            }
+        }
+        #pragma omp critical
+        {
+            for (int j = i + 1; j < n; j++) {
+                double factor = m[j][i] / m[i][i];
+                for (int k = i; k < n; k++) {
+                    m[j][k] -= factor * m[i][k];
+                }
+                results[j] -= factor * results[i];
+            }
+        }
+    }
+}
+
+std::vector<double> backWardSubstitution(Matrix<double> &m, std::vector<double> &r) {
+    std::vector<double> solutions(r.size(), 0);
+
+    for(int i = r.size() - 1; i >= 0; i--) {
+        solutions[i] = r[i];
+        for (size_t j = i + 1; j < r.size(); j++)
+        {   
+            solutions[i] -= m[i][j] * solutions[j];
+        }
+        solutions[i] /= m[i][i];
+    }
+    return solutions;
+}
+
+std::vector<double> backWardSubstitutionParallel(Matrix<double> &m, std::vector<double> &r) {
+    std::vector<double> solutions(r.size(), 0);
+
+    #pragma omp parallel for shared(m, r, solutions)
+    for(int i = r.size() - 1; i >= 0; i--) {
+        solutions[i] = r[i];
+        for (size_t j = i + 1; j < r.size(); j++)
+        {
+            solutions[i] -= m[i][j] * solutions[j];
+        }
+        solutions[i] /= m[i][i];
+    }
+    return solutions;
+}
+
+std::vector<double> backWardSubstitutionParallelWithoutRace(Matrix<double> &m, std::vector<double> &r) {
+    std::vector<double> solutions(r.size(), 0);
+
+    #pragma omp parallel for shared(m, r) 
+    for(int i = r.size() - 1; i >= 0; i--) {
+        #pragma omp critical
+        {
+            solutions[i] = r[i];
+            for (size_t j = i + 1; j < r.size(); j++)
+            {
+                solutions[i] -= m[i][j] * solutions[j];
+            }
+            solutions[i] /= m[i][i];
+        }
+    }
+    return solutions;
+}
+
+void run() {
+    auto [ms, rs] = test_case();
+    auto s = omp_get_wtime();
+    forwardElimination(ms, rs);
+    auto solution = backWardSubstitution(ms, rs);
+    auto e = omp_get_wtime();
+    std::cout << line;
+    std::cout << "Serial";
+    std::cout << line << "\n";
+    for (int i = 0; i < rs.size(); i++) {
+        std::cout << "x" << i + 1 << " = " << std::fixed << std::setprecision(6) << solution[i] << std::endl;
+    }
+
+    std::cout << "duration " << (e - s) << "s" << std::endl;
+    std::cout << line << "\n";
+
+    auto [mp, rp] = test_case();
     
-    std::cout << "Actual PI " << std::setprecision (10) << pi << "\n";
-    std::cout << "\nparallel\n";
-    printStats(" values", n_values, stats_pi);
-
-    std::cout << "\nparallel\n";
-    printStats(" durations", n_values, stats_durations);
-    std::cout << "\nparallel\n";
-    printStats(" errors", n_values, stats_errors);
-}
-
-void parallelPiWithRace() 
-{
-    int i = 0, j = 0;
-
-    for (auto &&alignment : alignments)
-    {
-        for (auto &&n : n_values)
-        {
-            auto [area, duration] = calculatePiParallelWithRace(n, alignment);
-            stats_pi[i][j] = area; 
-            stats_durations[i][j] = duration; 
-            stats_errors[i][j++] = pi - area; 
-        }
-        i++;
-        j = 0;
+    s = omp_get_wtime();
+    forwardEliminationParallel(mp, rp);
+    solution = backWardSubstitutionParallel(mp, rp);
+    e = omp_get_wtime();
+    std::cout << line;
+    std::cout << "Parallel";
+    std::cout << line << "\n";
+    for (int i = 0; i < rp.size(); i++) {
+        std::cout << "x" << i + 1 << " = " << std::fixed << std::setprecision(6) << solution[i] << std::endl;
     }
+    std::cout << "duration " << (e - s) << "s" << std::endl;
+    std::cout << line << "\n";
 
-    std::cout << "\n\n\nActual PI " << std::setprecision (10) << pi << "\n";
-    std::cout << "PARALLEL PI WITH RACE\n";
-    printStats(" values", n_values, stats_pi);
-    printStats(" durations", n_values, stats_durations);
-    printStats(" errors", n_values, stats_errors);
+    auto [m, r] = test_case();
+    s = omp_get_wtime();
+    forwardEliminationParallelWithoutRace(m,r);
+    solution = backWardSubstitutionParallelWithoutRace(m, r);
+    e = omp_get_wtime();
+    std::cout << line;
+    std::cout << "Parallel without race";
+    std::cout << line << "\n";
+    for (int i = 0; i < r.size(); i++) {
+        std::cout << "x" << i + 1 << " = " << std::fixed << std::setprecision(6) << solution[i] << std::endl;
+    }
+    std::cout << "duration " << (e - s) << "s" << std::endl;
+    std::cout << line << "\n";
 }
+
 int main() {
-    serialPi();
-    parallelPi();
-    parallelPiWithRace();
+    //omp_set_num_threads(4);
+    TIME_POINT(s);
+    run();
+    TIME_POINT(e);
+    RUN_TIME("total run time:", s, e);
     return 0;
 }

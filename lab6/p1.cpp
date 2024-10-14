@@ -1,185 +1,69 @@
 /*
-Write an OpenMP program with C++ that solves the system of linear equations 𝑨𝒙 =
-𝒃 using LU factorization with row pivoting, followed by backward substitution. Gauss
-Elimination method can be used to derive the Upper triangular matrix.
-The following components are to be shown.
-(a) Write the serial version program to solves the system of linear equations, 𝑨𝒙 = 𝒃.
-Calculate the execution time by using the OpenMP library function.
-(b) Write the parallel version program to estimate the same. Test the result with (a).
-It includes number of threads involved and the result calculated by which thread
-number. Calculate the execution time by using the OpenMP library function. 
-
+a) Write an OpenMP serial and parallel program with C/C++ to compute the
+occurrence of words in a file.
+b) Store the counts of each words from (a) in an array. Using OpenMP, do the parallel
+version of Quicksort to arrange the counts into descending order and then display top
+10 words based on the highest count. 
 */
-
-
-#include <omp.h>
 #include <iostream>
-#include <chrono>
-#include <vector>
-#include <cstdint>
-#include <random>
-#include <cstdlib>
-#include <iomanip>
-#define TIME_POINT omp_get_wtime()
-#define RUN_TIME(start_id, end_id) end_id - start_id
+#include <fstream>
+#include <ios>
+#include <cstring>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
+#include <unordered_map>
 
-// #define TIME_POINT std::chrono::high_resolution_clock::now()
-// #define RUN_TIME(start_id, end_id) (static_cast<std::chrono::duration<double>>(end_id - start_id)).count()
-// #define PARALLEL
+uint64_t get_no_of_lines(std::ifstream &f) {
+    uint64_t s = f.tellg();
+    f.seekg(0);
+    f.unsetf(std::ios_base::skipws);
+    unsigned line_count = std::count(
+        std::istream_iterator<char>(f),
+        std::istream_iterator<char> (),
+        '\n'
+    );
+    f.setf(std::ios_base::skipws);
+    f.clear();
+    f.seekg(s);
+    return line_count;
+}
 
-#include <bits/stdc++.h>
-#include <vector>
-#include <omp.h>
+int main() {
+    std::ifstream f("chandrayaan.txt"); 
+    if (!f.is_open()) {
+        std::cerr << "Error opening file." << std::endl;
+        return -1;
+    }
+    uint64_t line_count = get_no_of_lines(f);
+    std::unordered_map<std::string, uint64_t> m;
 
-
-int main()
-{
-    auto start_time = TIME_POINT;
-    int n = 3;
-    // std::cout << "Enter the number of equations : ";
-    // std::cin >> n;
-    // std::vector<std::vector<double>> A(n, std::vector<double>(n));
-    // std::vector<double> B(n);
-
-    std::vector<std::vector<double>> A = {
-        {1,2,3},
-        {3,1,4},
-        {5,3,1},
-    };
-
-    std::vector<double> B = {
-        14,17,14
-    };
-
-    // std::cout << "Fill matrix A : " << std::endl;
-    // for (int i = 0; i < n; i++)
-    // {
-    //     for (int j = 0; j < n; j++)
-    //     {
-    //         std::cin >> A[i][j];
-    //     }
-    // }
-    // std::cout << "---------------------------\n";
-    // std::cout << "Enter matrix B : " << std::endl;
-    // for (int i = 0; i < n; i++)
-    // {
-    //     std::cin >> B[i];
-    // }
-    
-    std::vector<std::vector<double>> L(n, std::vector<double>(n, 0.0));
-    std::vector<std::vector<double>> U(n, std::vector<double>(n));
-
-    // Decomposing matrix into L and U
-    for (int i = 0; i < n; i++)
+    #pragma omp parallel
     {
-        // Fill upper triangular matrix U
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
-        for (int j = i; j < n; j++)
+        std::unordered_map<std::string, uint32_t> local_count;
+        
+        #pragma omp for
+        for (size_t i = 0; i < line_count; i++)
         {
-            U[i][j] = A[i][j];
-        }
-        // Fill lower triangular matrix L and update A
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
-        for (int j = i + 1; j < n; j++)
-        {
-            L[j][i] = A[j][i] / A[i][i]; // Factor
-            for (int k = i; k < n; k++)
-            {
-                A[j][k] -= L[j][i] * U[i][k];
+            std::string s;
+            #pragma omp critical
+            getline(f,s);
+            std::istringstream iss(s);
+            std::string word;
+            while (iss >> word) {
+                #pragma omp atomic
+                local_count[word]++;
             }
-            // #pragma omp critical
-            // std::cout<<"thread - "<<omp_get_thread_num()<<std::endl;
         }
-    }
-    
-    // Set diagonal elements of L to 1
-    for (int i = 0; i < n; i++)
-    {
-        L[i][i] = 1.0;
-    }
-    
-    // Display L matrix
-    std::cout << "---------------------------\n";
-    std::cout << "L matrix: " << std::endl;
 
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
+        for (auto &&i : local_count)
         {
-            std::cout << L[i][j] << " ";
+            m[i.first] += i.second;
         }
-        std::cout << std::endl;
+    }
+    for (auto &&i : m)
+    {
+        std::cout << i.first << " " << i.second << std::endl;
     }
     
-    // Display U matrix
-    std::cout << "---------------------------\n";
-    std::cout << "U matrix: " << std::endl;
-    for (int i = 0; i < n; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            std::cout << U[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
-    
-    // Forward substitution to solve LY = B
-    std::vector<double> y(n);
-    for (int i = 0; i < n; i++)
-    {
-        y[i] = B[i];
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
-        for (int j = 0; j < i; j++)
-        {
-#ifdef PARALLEL
-            #pragma omp atomic
-#endif
-            y[i] -= L[i][j] * y[j];
-        }
-    }
-    std::cout << "---------------------------\n";
-    std::cout << "Y matrix: " << std::endl;
-    for (int i = 0; i < n; i++)
-    {
-        std::cout << y[i] << std::endl;
-    }
-
-    // Backward substitution to solve UX = Y
-    std::vector<double> x(n);
-    for (int i = n - 1; i >= 0; i--)
-    {
-        x[i] = y[i];
-
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
-        for (int j = i + 1; j < n; j++)
-        {
-#ifdef PARALLEL
-            #pragma omp atomic
-#endif            
-            x[i] -= U[i][j] * x[j];
-        }
-        x[i] /= U[i][i];
-    }
-    
-    std::cout << "---------------------------\n";
-    std::cout << "X matrix (solution): " << std::endl;
-    for (int i = 0; i < n; i++)
-    {
-        std::cout << x[i] << std::endl;
-    }
-    std::cout << "---------------------------\n";
-
-    auto end_time = TIME_POINT;
-    auto elapsed_time = RUN_TIME(start_time, end_time);
-    // elapsed_time = elapsed_time * 1e3;
-    std::cout << "Execution time: " << elapsed_time << " milli seconds" << std::endl;
-    return 0;
 }
