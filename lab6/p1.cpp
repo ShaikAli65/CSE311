@@ -13,6 +13,7 @@ version of Quicksort to arrange the counts into descending order and then displa
 #include <algorithm>
 #include <iterator>
 #include <unordered_map>
+#include <cstdint>
 
 uint64_t get_no_of_lines(std::ifstream &f) {
     uint64_t s = f.tellg();

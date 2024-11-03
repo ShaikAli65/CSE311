@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build mpi",
+            "type": "cppbuild",
+            "command": "g++",
+            "args": [
+                "-fdiagnostics-color=always",
+                "${file}",
+                "-o",
+                "${fileDirname}\\${fileBasenameNoExtension}.exe",
+                "-I",
+                "C:\\Program Files (x86)\\Microsoft SDKs\\MPI\\Include",
+                "-L",
+                "C:\\Program Files (x86)\\Microsoft SDKs\\MPI\\Lib\\x64",
+                "-lmsmpi"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "MSMPI build compiler: c:\\mingw64\\bin\\g++.exe"
+        },
+        {
+            "label": "run mpi",
+            "type": "shell",
+            "command": "mpiexec",
+            "args": [
+                "-n",
+                "4",
+                "${fileDirname}\\${fileBasenameNoExtension}.exe"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "dependsOn": [
+                "build mpi"
+            ],
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "detail": "MSMPI build compiler: c:\\mingw64\\bin\\g++.exe"
+        }
+    ]
+}

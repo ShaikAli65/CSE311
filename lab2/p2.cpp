@@ -51,19 +51,6 @@ void print_with_id(int thread_id, Args ...args) {
     (std::cout << ... << args) << std::endl;
 }
 
-
-// std::string build_header(const std::string& prefix) {
-//     std::string final_string;
-//     final_string.reserve();
-//     std::string s1 = "\n";
-//     std::string s2 = BLACK;
-//     std::string s3 = ":stats(" + prefix + "):";
-//     std::string s4 = std::string(std::max(0, HEADER_LEN - static_cast<int>(s3.size())), '='); 
-//     std::string s5 = COLOR_RESET + "\n";
-
-//     return s1 + s2 + s3 + s4 + s5; 
-// }
-
 std::string build_header(const std::string& prefix) {
     constexpr std::string_view newline = "\n";
     constexpr std::string_view black = BLACK;
