@@ -31,7 +31,7 @@
             "command": "mpiexec",
             "args": [
                 "-n",
-                "4",
+                "2",
                 "${fileDirname}\\${fileBasenameNoExtension}.exe"
             ],
             "group": {

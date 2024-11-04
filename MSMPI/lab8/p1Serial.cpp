@@ -25,11 +25,11 @@ double trapezoidal_rule(double a, double b, int n) {
     double integral = 0.5 * (f(a) + f(b)); 
 
     for (int i = 1; i < n; i++) {
-        integral += f(a + i * h); 
+        auto x = a + i * h;
+        integral += f(x); 
     }
-
-    integral *= h; 
-    return integral;
+    
+    return integral * h;
 }
 
 

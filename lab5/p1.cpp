@@ -36,10 +36,6 @@ int main()
 {
     auto start_time = TIME_POINT;
     int n = 3;
-    // std::cout << "Enter the number of equations : ";
-    // std::cin >> n;
-    // std::vector<std::vector<double>> A(n, std::vector<double>(n));
-    // std::vector<double> B(n);
 
     std::vector<std::vector<double>> A = {
         {1,2,3},
@@ -50,21 +46,6 @@ int main()
     std::vector<double> B = {
         14,17,14
     };
-
-    // std::cout << "Fill matrix A : " << std::endl;
-    // for (int i = 0; i < n; i++)
-    // {
-    //     for (int j = 0; j < n; j++)
-    //     {
-    //         std::cin >> A[i][j];
-    //     }
-    // }
-    // std::cout << "---------------------------\n";
-    // std::cout << "Enter matrix B : " << std::endl;
-    // for (int i = 0; i < n; i++)
-    // {
-    //     std::cin >> B[i];
-    // }
     
     std::vector<std::vector<double>> L(n, std::vector<double>(n, 0.0));
     std::vector<std::vector<double>> U(n, std::vector<double>(n));
@@ -73,17 +54,11 @@ int main()
     for (int i = 0; i < n; i++)
     {
         // Fill upper triangular matrix U
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
         for (int j = i; j < n; j++)
         {
             U[i][j] = A[i][j];
         }
         // Fill lower triangular matrix L and update A
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
         for (int j = i + 1; j < n; j++)
         {
             L[j][i] = A[j][i] / A[i][i]; // Factor
@@ -91,8 +66,6 @@ int main()
             {
                 A[j][k] -= L[j][i] * U[i][k];
             }
-            // #pragma omp critical
-            // std::cout<<"thread - "<<omp_get_thread_num()<<std::endl;
         }
     }
     
@@ -132,14 +105,8 @@ int main()
     for (int i = 0; i < n; i++)
     {
         y[i] = B[i];
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
         for (int j = 0; j < i; j++)
         {
-#ifdef PARALLEL
-            #pragma omp atomic
-#endif
             y[i] -= L[i][j] * y[j];
         }
     }
@@ -156,14 +123,8 @@ int main()
     {
         x[i] = y[i];
 
-#ifdef PARALLEL
-        #pragma omp parallel for
-#endif
         for (int j = i + 1; j < n; j++)
         {
-#ifdef PARALLEL
-            #pragma omp atomic
-#endif            
             x[i] -= U[i][j] * x[j];
         }
         x[i] /= U[i][i];
@@ -183,3 +144,5 @@ int main()
     std::cout << "Execution time: " << elapsed_time << " milli seconds" << std::endl;
     return 0;
 }
+// C++ Program to decompose a matrix into
+// lower and upper triangular matrix

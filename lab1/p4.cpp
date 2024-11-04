@@ -96,6 +96,7 @@ void run() {
     constexpr size_t rows = 1000, cols = 1000;
     const auto&matrix1=get_random_matrix(5, rows, cols), matrix2 = get_random_matrix(6, rows, cols);
     TIME_POINT(s);
+    // auto _ = multiply(matrix1, matrix2);
     auto _ = pmultiply(matrix1, matrix2);
     TIME_POINT(e);
     // print_matrix(_);

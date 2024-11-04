@@ -15,7 +15,7 @@ vector<vector<double>> get_cofactor(vector<vector<double>>
     {
         for (int y = 0; y < n; y++)
         {
-            if (x != i and y != j)
+            if (x != i && y != j)
             {
                 cf[r][c] = matrix[x][y];
                 c++;
@@ -41,10 +41,8 @@ double get_determinant(vector<vector<double>> &matrix)
     for (int col = 0; col < n; col++)
     {
         int sign = col % 2 == 1 ? -1 : 1;
-        vector<vector<double>> minor = get_cofactor(matrix, 0,
-                                                    col);
-        det += (matrix[0][col] * sign *
-                get_determinant(minor));
+        vector<vector<double>> minor = get_cofactor(matrix, 0, col);
+        det += matrix[0][col] * sign * get_determinant(minor);
     }
     return det;
 }

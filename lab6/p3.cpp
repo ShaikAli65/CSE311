@@ -1,54 +1,51 @@
-// lalith dutt
 #include <iostream>
-#include <cmath>
 #include <vector>
-#include <omp.h>
-using namespace std;
-bool isPrime(long long int n)
-{
-    if (n <= 1)
-        return false;
-    if (n <= 3)
-        return true;
-    if (n % 2 == 0 || n % 3 == 0)
-        return false;
-    for (long long int i = 5; i * i <= n; i += 6)
-    {
-        if (n % i == 0 || n % (i + 2) == 0)
-        {
-            return false;
-        }
+#include <cmath>
+
+// Function to check if a number is prime
+bool isPrime(int num) {
+    if (num <= 1) return false;
+    if (num <= 3) return true;
+    if (num % 2 == 0 || num % 3 == 0) return false;
+    for (int i = 5; i * i <= num; i += 6) {
+        if (num % i == 0 || num % (i + 2) == 0) return false;
     }
     return true;
 }
-void isPerfect(int N)
-{
-    vector<long long int> results(N);
-#pragma omp parallel
-    {
-#pragma omp for ordered
-        for (int i = 1; i <= N; i++)
-        {
-            long long int x = (1LL << i) - 1;
-            if (isPrime(x))
-            {
-                long long int y = (1LL << (i - 1));
-                long long int perfectNum = x * y;
-#pragma omp ordered
-                results[i - 1] = perfectNum;
-            }
+
+// Function to find the first n perfect numbers using Mersenne primes
+std::vector<long long> findPerfectNumbers(int n) {
+    std::vector<long long> perfectNumbers;
+    int count = 0;
+    int p = 2;
+
+    while (count < n) {
+        // Check if 2^p - 1 is prime
+        long long mersennePrime = pow(2, p - 1) - 1; // 2^p - 1
+        if (isPrime(mersennePrime)) {
+            // If it's prime, calculate the perfect number
+            long long perfectNumber = pow(2, p - 1) * mersennePrime; // 2^(p-1) * (2^p - 1)
+            perfectNumbers.push_back(perfectNumber);
+            count++;
         }
+        p++;
     }
-    cout << "Parallel Version :" << endl;
-    for (const auto &res : results)
-    {
-        if (res != 0)
-            cout << res << endl;
-    }
+
+    return perfectNumbers;
 }
-int main()
-{
-    int N = 100;
-    isPerfect(N);
+
+int main() {
+    int n;
+    std::cout << "Enter the number of perfect numbers to find: ";
+    std::cin >> n;
+
+    std::vector<long long> perfectNumbers = findPerfectNumbers(n);
+
+    std::cout << "First " << n << " perfect numbers: ";
+    for (long long num : perfectNumbers) {
+        std::cout << num << " ";
+    }
+    std::cout << std::endl;
+
     return 0;
 }

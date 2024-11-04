@@ -97,7 +97,7 @@ void forwardEliminationParallel(Matrix<double> &m, std::vector<double> &results)
         }
         // Elimination
         for (int j = i + 1; j < n; j++) {
-            double factor = m[j][i] / m[i][i];
+            const double &factor = m[j][i] / m[i][i];
             for (int k = i; k < n; k++) {
                 m[j][k] -= factor * m[i][k];
             }

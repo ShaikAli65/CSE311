@@ -1,6 +1,7 @@
 #include <vector>
 #include <iostream>
 #include <mpi.h>
+#include <queue>
 
 void printArray(std::vector<int> &arr) {
     for (auto &&i : arr)
@@ -12,7 +13,6 @@ void printArray(std::vector<int> &arr) {
 
 void gatherAndPrint(std::vector<int> local_arr, int local_n, int finalArrSize, int phase, int rank) {
     std::vector<int> finalArray;
-
     if (rank == 0) {
         finalArray.resize(finalArrSize);
     }
@@ -33,7 +33,7 @@ void oddEvenSortParallel(std::vector<int> &local_arr, int local_n, int rank, int
     for (size_t phase = 0; phase < n; phase++) {
         sorted = 1;
         int neighbor_val;
-
+        MPI_Reduce;
         // Even phase
         if (phase % 2 == 0) {
             if (rank % 2 == 0 && rank < size - 1) {
