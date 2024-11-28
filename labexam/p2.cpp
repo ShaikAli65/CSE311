@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <random>
 #include <cstdlib>
-#include "transpose"
 using namespace std;
 
 
@@ -22,7 +21,7 @@ double localResult(vector<int> &a, vector<int> &b)
 void print_arr(vector<int> &a) {
     for (auto &&i : a)
     {
-        std::cout << i << ' ';
+        std::cout << i << ' ';  
     }
     std::cout << "\n";
 }
@@ -50,7 +49,8 @@ int main(int argc, char** argv) {
             2, -1,
             0, 3,
             4, 5,
-            }; 
+        }; 
+        
         for (size_t i = 0; i < input1.size(); i++)
         {
             a[i] = input1[i];
@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
             1,-1,
             0,3,
             2,1
+            // this is inverse of actual matrix
         };       
 
         for (size_t i = 0; i < input2.size(); i++)
@@ -88,6 +89,7 @@ int main(int argc, char** argv) {
     if (world_rank != 0) {
         MPI_Send(local_result.data(),local_result.size(),MPI_INT, 0, 0, MPI_COMM_WORLD);
     }
+
     MPI_Barrier(MPI_COMM_WORLD);
     
     if (world_rank == 0) {
@@ -104,6 +106,7 @@ int main(int argc, char** argv) {
             for (size_t j = 0; j < matrix.size(); j++)
             {
                 std::cout << matrix[j][i] << " ";
+                // printing matrix transpose
             }
             std::cout << "\n";
         }
